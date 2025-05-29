@@ -1,0 +1,119 @@
+#!/bin/bash
+
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+echo "--------------------------------------------------------------------"
+echo "Starting provisioning of Inception Host VM..."
+echo "--------------------------------------------------------------------"
+date
+
+# --- System Update and Basic Utilities ---
+echo ">>> Updating package lists and installing basic utilities..."
+export DEBIAN_FRONTEND=noninteractive # Prevents interactive prompts during apt installs
+sudo apt-get update -y
+sudo apt-get upgrade -y
+sudo apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    software-properties-common \
+    wget \
+    git \
+    nano \
+    unzip \
+    build-essential \
+    linux-headers-$(uname -r) \
+    dkms
+
+# --- Install VirtualBox (for inner Vagrant VMs) ---
+# Using the version from Ubuntu's repositories for simplicity here.
+# For the absolute latest, you'd add Oracle's repo.
+echo ">>> Installing VirtualBox..."
+# Ensure old versions are removed if any
+sudo apt-get remove -y virtualbox virtualbox-ext-pack virtualbox-dkms
+# Install VirtualBox and Extension Pack (Extension pack provides USB 2.0/3.0, etc.)
+# Note: The version of virtualbox in standard Ubuntu repos might be slightly older.
+# For latest, see: https://www.virtualbox.org/wiki/Linux_Downloads
+sudo apt-get install -y virtualbox virtualbox-dkms
+# Attempt to install extension pack (might require manual download/accept license if not fully non-interactive)
+# As an alternative, download and install manually if this fails:
+# VBOX_VERSION=$(vboxmanage --version | cut -dr -f1)
+# VBOX_EXT_PACK_URL="https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/Oracle_VM_VirtualBox_Extension_Pack-${VBOX_VERSION}.vbox-extpack"
+# wget -q "${VBOX_EXT_PACK_URL}" -O /tmp/Oracle_VM_VirtualBox_Extension_Pack.vbox-extpack
+# echo "y" | sudo vboxmanage extpack install /tmp/Oracle_VM_VirtualBox_Extension_Pack.vbox-extpack --replace || echo "VBox Ext Pack install might have failed or already installed."
+# rm -f /tmp/Oracle_VM_VirtualBox_Extension_Pack.vbox-extpack
+
+echo "VirtualBox version:"
+vboxmanage --version || echo "VirtualBox not found or failed to get version."
+
+# --- Install Vagrant ---
+echo ">>> Installing Vagrant..."
+# Get the latest Vagrant version
+VAGRANT_VERSION="2.4.1" # Check for the latest stable version on releases.hashicorp.com
+VAGRANT_DEB="vagrant_${VAGRANT_VERSION}_linux_amd64.deb"
+wget -q "https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/${VAGRANT_DEB}" -O "/tmp/${VAGRANT_DEB}"
+sudo apt-get install -y "/tmp/${VAGRANT_DEB}"
+rm -f "/tmp/${VAGRANT_DEB}"
+echo "Vagrant version:"
+vagrant --version
+
+# --- Install Docker ---
+echo ">>> Installing Docker..."
+# Add Docker's official GPG key:
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+echo "Docker version:"
+docker --version
+
+# --- Install kubectl ---
+echo ">>> Installing kubectl..."
+KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+rm kubectl
+echo "kubectl version:"
+kubectl version --client --output=yaml # Use yaml to avoid server connection attempt
+
+# --- Install k3d ---
+echo ">>> Installing k3d..."
+# Using wget for better error handling in scripts
+wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+echo "k3d version:"
+k3d version
+
+# --- Install cpu-checker (to verify nested virtualization) ---
+echo ">>> Installing cpu-checker..."
+sudo apt-get install -y cpu-checker
+
+# --- Add vagrant user to necessary groups ---
+echo ">>> Adding 'vagrant' user to 'docker' and 'vboxusers' groups..."
+sudo usermod -aG docker vagrant
+sudo usermod -aG vboxusers vagrant
+# Note: For group changes to take effect, the user 'vagrant' would typically need to log out and log back in.
+# When vagrant provision runs, this script runs as root or vagrant with sudo,
+# but for subsequent `vagrant ssh` sessions and manual commands as 'vagrant', this is important.
+
+# --- Final Checks (Optional, for logging) ---
+echo ">>> Verifying nested virtualization support (kvm-ok)..."
+# This will run after a reboot if needed for kernel modules, or directly.
+# The actual check should be done after `vagrant up` completes and you SSH in.
+kvm-ok || echo "kvm-ok check failed or requires reboot/further setup. Check after 'vagrant up' completes and you SSH in."
+
+echo "--------------------------------------------------------------------"
+echo "Provisioning of Inception Host VM completed."
+echo "You may need to 'vagrant reload' or logout/login for group changes (docker, vboxusers) to fully apply for the 'vagrant' user's session."
+echo "After 'vagrant up' finishes, SSH into the VM ('vagrant ssh' or 'ssh -p 2222 vagrant@localhost')"
+echo "and run 'kvm-ok' to confirm nested virtualization."
+echo "--------------------------------------------------------------------"
+date
