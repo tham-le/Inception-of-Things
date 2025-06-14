@@ -1,0 +1,33 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64" #latest stable version
+  config.vm.box_url = "..."
+
+  config.vm.define "yuboktaeS" do |server|
+      server.vm.hostname = "yuboktaeS"
+      server.vm.network "private_network", ip: "192.168.56.110"
+      server.vm.provider "virtualbox" do |vb|
+        vb.memory = 1024
+        vb.cpus = 1
+        vb.customize ["modyfyvm", :id, "--name", "yboktaeS"]
+        [...]
+    end
+    server.vm.provision :shell, :inline => SHELL
+        [...]
+    SHELL
+        server.vm.provision "shell", path: "scripts/setup_server.sh"
+  end
+  config.vm.define "yuboktaeSW" do |worker|
+      worker.vm.hostname = "yuboktaeSW"
+      worker.vm.network "private_network", ip: "192.168.56.111"
+      worker.vm.provider "virtualbox" do |vb|
+        vb.memory = 1024
+        vb.cpus = 1
+        vb.customize ["modifyvm", :id, "--name", "yuboktaeSW"]
+        [...]
+      end
+      config.vm.provision "shell", inline: <<-SHELL
+        [...]
+      SHELL
+      worker.vm.provision "shell", path: "scripts/setup_worker.sh"
+    end
+ end
