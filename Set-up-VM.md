@@ -23,17 +23,17 @@
 
 * **System > Processor:**
 
-    * **CPUs: Min 2** (4 recommended).
-    * **Crucial: Enable Nested VT-x/AMD-V.**
+  * **CPUs: Min 2** (4 recommended).
+  * **Crucial: Enable Nested VT-x/AMD-V.**
 * **Storage:**
     *Select "Empty" CD/DVD drive.
     *Click CD icon -> "Choose a disk file..." -> Select your Ubuntu Server ISO.
 * **Network:**
-    * **Adapter 1:** `NAT` (for internet).
-    * **Adapter 2:** `Host-only Adapter` (e.g., `vboxnet0`) (for SSH from school PC).
+  * **Adapter 1:** `NAT` (for internet).
+  * **Adapter 2:** `Host-only Adapter` (e.g., `vboxnet0`) (for SSH from school PC).
 * **Shared Folders (Optional but Recommended):**
     *"+" -> **Folder Path:** Your project directory on school PC.
-    * **Folder Name:** `project_files`.
+  * **Folder Name:** `project_files`.
     *Check "Auto-mount" & "Make Permanent".
 *Click "OK".
 
@@ -41,6 +41,7 @@
 
 *Start `Inception_Host_VM`.
 *Follow on-screen prompts for Ubuntu Server installation.
+
 * **Language, Keyboard:** Your preference.
 * **Installer Type:** Standard server (or "minimized" if offered).
 * **Network:** Should auto-configure.
@@ -68,6 +69,19 @@
             # sudo mkdir /mnt/project_files # If needed
             # sudo mount -t vboxsf project_files /mnt/project_files
             ```
+
+    if still not mounted, change /etc/fstab to auto-mount:
+
+    ```bash
+    sudo nano /etc/fstab
+    # Add the following line at the end:
+    /iot   /iot_project_files   vboxsf   uid=1000,gid=1000,defaults   0   0
+    # Save and exit (Ctrl+X, Y, Enter)
+    # Then mount all filesystems:
+    sudo mkdir -p /media/sf_project_files
+    sudo mount -a
+    ```
+
 * **Run Setup Script:**
     *Navigate to where `setup_inception_host.sh` is (e.g., `/media/sf_project_files/setup_inception_host.sh`).
     *Make it executable: `chmod +x /path/to/setup_inception_host.sh`
@@ -80,6 +94,7 @@
     *Output should be: `INFO: KVM acceleration can be used`. If not, re-check "Enable Nested VT-x/AMD-V" in VirtualBox settings for `Inception_Host_VM` (VM must be powered off to change).
 
 ### 5.  **Final Check & Logout/Login (for group changes):**
+
 *The `setup_inception_host.sh` adds `your_user` (or `vagrant` if script used that) to `docker` and `vboxusers` groups. For these to take effect in your current SSH session, you might need to:
     *Exit SSH session and log back in.
     *Or run `newgrp docker` and `newgrp vboxusers` (this starts new sub-shells with the group).
