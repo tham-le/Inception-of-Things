@@ -53,48 +53,87 @@ vboxmanage --version || echo "VirtualBox not found or failed to get version."
 echo ">>> Installing Vagrant..."
 # Get the latest Vagrant version
 VAGRANT_VERSION="2.4.1" # Check for the latest stable version on releases.hashicorp.com
-VAGRANT_DEB="vagrant_${VAGRANT_VERSION}_linux_amd64.deb"
-wget -q "https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/${VAGRANT_DEB}" -O "/tmp/${VAGRANT_DEB}"
-sudo apt-get install -y "/tmp/${VAGRANT_DEB}"
-rm -f "/tmp/${VAGRANT_DEB}"
+VAGRANT_VERSION_SUFFIX="${VAGRANT_VERSION}-1" # If version includes the suffix
+VAGRANT_DEB="vagrant_${VAGRANT_VERSION_SUFFIX}_amd64.deb"
+DEB_PATH="/tmp/${VAGRANT_DEB}"
+if [ ! -f "$DEB_PATH" ]; then
+  echo "Downloading Vagrant $VAGRANT_VERSION..."
+  wget "https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/${VAGRANT_DEB}" -O "$DEB_PATH"
+else
+  echo "Vagrant .deb already exists at $DEB_PATH, skipping download."
+fi
+sudo dpkg -i "$DEB_PATH" || sudo apt-get install -f -y # Install the .deb
+rm -f "$DEB_PATH"
 echo "Vagrant version:"
 vagrant --version
 
 # --- Install Docker ---
 echo ">>> Installing Docker..."
-# Add Docker's official GPG key:
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-# Add the repository to Apt sources:
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update -y
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+if command -v docker &> /dev/null; then
+  echo "Docker is already installed: $(docker --version)"
+else
+  echo "Docker not found, insatlling..."
+  # Add Docker's official GPG key (only if missing):
+  if [ ! -f /etc/apt/keyrings/docker.asc ]; then
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+  fi
+  # Add the repository to Apt sources (only if missing):
+  if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  fi
+  sudo apt-get update -y
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
 echo "Docker version:"
 docker --version
 
 # --- Install kubectl ---
 echo ">>> Installing kubectl..."
-KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-rm kubectl
+if command -v kubectl &> /dev/null; then
+  echo "kubectl is already installed: $(kubectl version)"
+else
+  echo "Downloading latest stble kubectl..."
+  KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+  curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+  if [ -f kubectl ]; then
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm kubectl
+  else
+    echo "Failed to download kubectl!"
+    exit 1
+  fi
+fi
 echo "kubectl version:"
 kubectl version --client --output=yaml # Use yaml to avoid server connection attempt
 
 # --- Install k3d ---
 echo ">>> Installing k3d..."
-# Using wget for better error handling in scripts
-wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+if command -v k3d &> /dev/null; then
+  echo "k3d is already installed: $(k3d version)"
+else
+  echo "Downloading latest stble k3d..."
+  # Using wget for better error handling in scripts
+  wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+fi
 echo "k3d version:"
 k3d version
 
 # --- Install cpu-checker (to verify nested virtualization) ---
 echo ">>> Installing cpu-checker..."
 sudo apt-get install -y cpu-checker
+
+# # --- Ensure vagrant user exists ---
+# if ! id vagrant &>/dev/null; then
+#   echo ">>> Creating 'vagrant' user..."
+#   sudo useradd -m -s /bin/bash vagrant
+#   echo "vagrant:vagrant" | sudo chpasswd
+#   sudo usermod -aG sudo vagrant
+# fi
 
 # --- Add vagrant user to necessary groups ---
 echo ">>> Adding 'vagrant' user to 'docker' and 'vboxusers' groups..."

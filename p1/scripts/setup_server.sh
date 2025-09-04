@@ -1,5 +1,6 @@
 #!/bin/bash
 SERVER_HOSTNAME="thi-leS"
+SERVER_IP="192.168.57.110"
 echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     # Ensure sudo works for vagrant user
@@ -10,7 +11,7 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     echo "Installing K3s Server..."
     # Using options from your friend's working example, plus --node-ip
-    curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="server --node-ip=#{SERVER_IP} --flannel-iface eth1" sh -s -
+    curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP} --flannel-iface eth1" sh -s -
     echo "K3s server installation script finished. Waiting for services..."
     sleep 25 # Give K3s services time to start
 
