@@ -1,33 +1,45 @@
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/jammy64" #latest stable version
-  config.vm.box_url = "..."
+  config.vm.box = "generic/alpine312"
+  config.vm.box_check_update = false
 
-  config.vm.define "yuboktaeS" do |server|
-      server.vm.hostname = "yuboktaeS"
-      server.vm.network "private_network", ip: "192.168.56.110"
+   ALPINE_COMMON_PACKAGES = [
+    "curl",
+    "ca-certificates",  # For HTTPS
+    "sudo",
+    "bash",
+    "openrc", # Alpine's init system
+    "net-tools"
+  ].join(" ")
+
+  #--- Server VM (K3s Controller) ---
+  SERVER_HOSTNAME = "thi-leS"
+  SERVER_IP = "192.168.57.110"  # make sure that non-conflicting IP
+  config.vm.define SERVER_HOSTNAME do |server|
+      server.vm.hostname = SERVER_HOSTNAME
+      server.vm.network "private_network", ip: SERVER_IP
+
+      server.vm.synced_folder ".", "/vagrant", type: "virtualbox"
       server.vm.provider "virtualbox" do |vb|
         vb.memory = 1024
         vb.cpus = 1
-        vb.customize ["modyfyvm", :id, "--name", "yboktaeS"]
-        [...]
-    end
-    server.vm.provision :shell, :inline => SHELL
-        [...]
-    SHELL
-        server.vm.provision "shell", path: "scripts/setup_server.sh"
+        vb.name = SERVER_HOSTNAME
+      end
+      server.vm.provision "shell", path: "scripts/setup_server.sh"
   end
-  config.vm.define "yuboktaeSW" do |worker|
-      worker.vm.hostname = "yuboktaeSW"
-      worker.vm.network "private_network", ip: "192.168.56.111"
+
+   # --- ServerWorker VM (K3s Agent) ---
+  WORKER_HOSTNAME = "thi-leSW"      # Your login
+  WORKER_IP = "192.168.57.111"  # Your non-conflicting IP
+
+  config.vm.define WORKER_HOSTNAME do |worker|
+      worker.vm.hostname = WORKER_HOSTNAME
+      worker.vm.network "private_network", ip: WORKER_IP
+      worker.vm.synced_folder ".", "/vagrant", type: "virtualbox"
       worker.vm.provider "virtualbox" do |vb|
         vb.memory = 1024
         vb.cpus = 1
-        vb.customize ["modifyvm", :id, "--name", "yuboktaeSW"]
-        [...]
+        vb.name = WORKER_HOSTNAME
       end
-      config.vm.provision "shell", inline: <<-SHELL
-        [...]
-      SHELL
       worker.vm.provision "shell", path: "scripts/setup_worker.sh"
     end
  end
