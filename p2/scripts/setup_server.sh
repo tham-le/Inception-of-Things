@@ -1,6 +1,6 @@
 #!/bin/bash
 SERVER_HOSTNAME="thi-leS"
-SERVER_IP="192.168.57.110"
+SERVER_IP="192.168.56.110"
 echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     # Ensure sudo works for vagrant user

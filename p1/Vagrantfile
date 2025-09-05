@@ -6,6 +6,7 @@ Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
   config.ssh.private_key_path = ["~/.vagrant.d/insecure_private_key"]
 
+
    ALPINE_COMMON_PACKAGES = [
     "curl",
     "ca-certificates",  # For HTTPS
@@ -40,7 +41,7 @@ Vagrant.configure("2") do |config|
       worker.vm.network "private_network", ip: WORKER_IP
       worker.vm.synced_folder ".", "/vagrant", type: "virtualbox"
       worker.vm.provider "virtualbox" do |vb|
-        vb.memory = 1024
+        vb.memory = 512
         vb.cpus = 1
         vb.name = WORKER_HOSTNAME
       end
