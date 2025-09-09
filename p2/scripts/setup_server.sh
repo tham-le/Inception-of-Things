@@ -11,7 +11,7 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     echo "Installing K3s Server..."
     # Using options from your friend's working example, plus --node-ip
-    curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP} --tls-san=${SERVER_IP} --flannel-iface eth1" sh -s -
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" K3S_KUBECONFIG_MODE="644" sh -s -
     echo "K3s server installation script finished. Waiting for services..."
     sleep 25 # Give K3s services time to start
 
@@ -22,10 +22,6 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     # Optionally, check K3s service status: rc-service k3s status
     exit 1
     fi
-    echo "K3s installed. Fixing kubeconfig..."
-    # Remplacer localhost par l’IP privée
-    sudo sed -i "s/127.0.0.1/${SERVER_IP}/g" /etc/rancher/k3s/k3s.yaml
-    sudo cp /etc/rancher/k3s/k3s.yaml /vagrant/kubeconfig.yaml
     # K3S_KUBECONFIG_MODE should handle this, but an explicit chmod is safe.
     sudo chmod 644 "${KUBE_CONFIG_PATH}"
 
@@ -80,4 +76,33 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     fi
     echo "kubectl configured for user vagrant."
     fi
+    
+    # Deploy applications
+    echo "Deploying applications..."
+    
+    # Wait for K3s to be fully ready
+    echo "Waiting for K3s to be ready..."
+    while ! kubectl get nodes --kubeconfig="${KUBE_CONFIG_PATH}" 2>/dev/null | grep -q "Ready"; do
+        sleep 5
+        echo "Waiting for K3s cluster to be ready..."
+    done
+    echo "K3s cluster is ready!"
+    
+    # Create pods
+    echo "Create pods..."
+    kubectl apply -f /vagrant/confs/deployments.yaml --kubeconfig="${KUBE_CONFIG_PATH}"
+    
+    # Create services
+    echo "Create services..."
+    kubectl apply -f /vagrant/confs/services.yaml --kubeconfig="${KUBE_CONFIG_PATH}"
+    
+    # Deploy ingress
+    echo "Deploying ingress..."
+    kubectl apply -f /vagrant/confs/ingress.yaml --kubeconfig="${KUBE_CONFIG_PATH}"
+    
+    sleep 50
+    # Show status
+    echo "Checking deployment status..."
+    kubectl get pods,services,ingress --kubeconfig="${KUBE_CONFIG_PATH}"
+    
     echo "K3s Server provisioning complete."

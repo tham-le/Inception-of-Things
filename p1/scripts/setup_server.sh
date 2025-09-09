@@ -1,6 +1,6 @@
 #!/bin/bash
 SERVER_HOSTNAME="thi-leS"
-SERVER_IP="192.168.57.110"
+SERVER_IP="192.168.56.110"
 echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     # Ensure sudo works for vagrant user
@@ -11,7 +11,7 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     echo "Installing K3s Server..."
     # Using options from your friend's working example, plus --node-ip
-    curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP} --tls-san=${SERVER_IP} --flannel-iface eth1" sh -s -
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" K3S_KUBECONFIG_MODE="644" sh -s -
     echo "K3s server installation script finished. Waiting for services..."
     sleep 25 # Give K3s services time to start
 
@@ -22,10 +22,6 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     # Optionally, check K3s service status: rc-service k3s status
     exit 1
     fi
-    echo "K3s installed. Fixing kubeconfig..."
-    # Remplacer localhost par l’IP privée
-    sudo sed -i "s/127.0.0.1/${SERVER_IP}/g" /etc/rancher/k3s/k3s.yaml
-    sudo cp /etc/rancher/k3s/k3s.yaml /vagrant/kubeconfig.yaml
     # K3S_KUBECONFIG_MODE should handle this, but an explicit chmod is safe.
     sudo chmod 644 "${KUBE_CONFIG_PATH}"
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 WORKER_HOSTNAME="thi-leSW"
-WORKER_IP="192.168.57.111"
-SERVER_IP="192.168.57.110"
+WORKER_IP="192.168.56.111"
+SERVER_IP="192.168.56.110"
 
 echo ">>> Provisioning K3s Agent (${WORKER_HOSTNAME}) on Alpine..."
 

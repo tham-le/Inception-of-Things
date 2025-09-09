@@ -18,7 +18,7 @@ Vagrant.configure("2") do |config|
 
   #--- Server VM (K3s Controller) ---
   SERVER_HOSTNAME = "thi-leS"
-  SERVER_IP = "192.168.57.110"  # make sure that non-conflicting IP
+  SERVER_IP = "192.168.56.110"
   config.vm.define SERVER_HOSTNAME do |server|
       server.vm.hostname = SERVER_HOSTNAME
       server.vm.network "private_network", ip: SERVER_IP
@@ -33,8 +33,8 @@ Vagrant.configure("2") do |config|
   end
 
    # --- ServerWorker VM (K3s Agent) ---
-  WORKER_HOSTNAME = "thi-leSW"      # Your login
-  WORKER_IP = "192.168.57.111"  # Your non-conflicting IP
+  WORKER_HOSTNAME = "thi-leSW"
+  WORKER_IP = "192.168.56.111"
 
   config.vm.define WORKER_HOSTNAME do |worker|
       worker.vm.hostname = WORKER_HOSTNAME
