@@ -4,7 +4,6 @@ set -e
 # ================================
 # Verify utils
 # ================================
-
 # Check Docker
 if ! command -v docker &> /dev/null; then
     echo "[INFO] Install Docker..."
@@ -33,6 +32,7 @@ else
     echo "[OK] k3d already installed : $(k3d version)"
 fi
 
+
 # ================================
 # Create cluster K3D
 # ================================
@@ -43,12 +43,25 @@ if k3d cluster list | grep -q "$CLUSTER_NAME"; then
 else
     echo "Create cluster $CLUSTER_NAME..."
     k3d cluster create $CLUSTER_NAME --wait \
+        --port "80:80@loadbalancer" \
+        --port "443:443@loadbalancer" \
         --k3s-arg "--kubelet-arg=eviction-hard=imagefs.available<100Mi,nodefs.available<100Mi@server:0"
 
 fi
 
-echo "Remove disk pressure taint if present..."
-kubectl taint nodes --all node.kubernetes.io/disk-pressure:NoSchedule- || true
+# ================================
+# Install ArgoCD
+# ================================
+# Check if ArgoCD CLI is already installed
+if ! command -v argocd &> /dev/null; then
+    echo "Install ArgoCD CLI..."
+    curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+    sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+    rm argocd-linux-amd64
+else
+    echo "[OK] ArgoCD CLI already installed : $(argocd version --client --short 2>/dev/null || echo 'version unknown')"
+fi
+
 
 # ================================
 # Namespaces
@@ -56,28 +69,26 @@ kubectl taint nodes --all node.kubernetes.io/disk-pressure:NoSchedule- || true
 echo "Create namespaces..."
 kubectl apply -f confs/namespaces.yaml
 
-# ================================
-# Install ArgoCD
-# ================================
-echo "Install d'ArgoCD..."
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
-# Wait for ArgoCD to be ready
-echo "Waiting for ArgoCD to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd
 
 # ================================
 # Application via ArgoCD
 # ================================
+echo "Install ArgoCD CRDs and components..."
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
 echo "Deploy application directly to dev namespace..."
 kubectl apply -f confs/app/ -n dev
 
 echo "Deploy ArgoCD application configuration..."
 kubectl apply -f confs/application.yaml -n argocd
 
-
+# expose agrocd
+echo "waiting for argocd pods to start.."
+kubectl wait --for=condition=Ready pods --all --timeout=69420s -n argocd
+kubectl port-forward svc/argocd-server -n argocd 8080:443 --address="0.0.0.0" 2>&1 > /tmp/argocd-log &
 
 # ================================
 # Fin
 # ================================
 echo "Cluster K3D + ArgoCD + App deployed"
+echo "Use './scripts/argocd_access.sh' to get login credentials and manage access."

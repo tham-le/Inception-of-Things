@@ -5,18 +5,19 @@ NAMESPACE="argocd"
 SERVICE="argocd-server"
 LOCAL_PORT=8080
 
-sudo apt install jq -y
-
-echo "=== admin ArgoCD password ==="
+echo "=== Getting ArgoCD admin password ==="
 PASSWORD=$(kubectl -n $NAMESPACE get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" | base64 -d)
+  -o jsonpath="{.data.password}" | base64 -d 2>/dev/null || echo "")
+        
+if [ -z "$PASSWORD" ]; then
+    echo "ERROR: Could not retrieve ArgoCD password"
+    exit 1
+fi
 
-echo "Got admin password"
-
-echo "=== Lancement du port-forward ArgoCD ==="
-echo "Access via https://localhost:$LOCAL_PORT"
-echo "Login : admin"
-echo "Password : $PASSWORD"
-echo "Press Ctrl+C to stop port-forward."
-
-kubectl port-forward svc/$SERVICE -n $NAMESPACE $LOCAL_PORT:443
+echo "Got admin password: $PASSWORD"
+echo "Username: admin"
+echo "Password: $PASSWORD"
+HOST_ONLY_IP=$(hostname -I | tr ' ' '\n' | grep "^192\.168\." | head -1)
+if [ ! -z "$HOST_ONLY_IP" ]; then
+    echo "From physical PC: http://$HOST_ONLY_IP:8080"
+fi
