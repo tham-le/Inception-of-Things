@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 SERVER_HOSTNAME="thi-leS"
 SERVER_IP="192.168.56.110"
 echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
