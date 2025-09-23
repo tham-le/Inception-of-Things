@@ -13,9 +13,16 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     echo "Installing K3s Server..."
     # Using options from your friend's working example, plus --node-ip
     curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" K3S_KUBECONFIG_MODE="644" sh -s -
-    echo "K3s server installation script finished. Waiting for services..."
-    sleep 25 # Give K3s services time to start
-
+    echo "K3s server installation script finished."
+    echo "Waiting for K3s server to create kubeconfig..."
+    KUBE_CONFIG_PATH="/etc/rancher/k3s/k3s.yaml"
+    SECONDS_WAITED=0
+    while [ ! -f "${KUBE_CONFIG_PATH}" ]; do
+        # (add timeout logic like you did for the node-token)
+        sleep 5
+        SECONDS_WAITED=$((SECONDS_WAITED + 5))
+        echo "Still waiting for kubeconfig (${SECONDS_WAITED}s)..."
+    done
     # Verify k3s.yaml exists and has correct permissions
     KUBE_CONFIG_PATH="/etc/rancher/k3s/k3s.yaml"
     if [ ! -f "${KUBE_CONFIG_PATH}" ]; then
@@ -69,6 +76,9 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     fi
     # Add alias and completion to .bashrc (if bash is default) or .profile
     PROFILE_FILE="/home/vagrant/.bashrc"; if [ ! -f "$PROFILE_FILE" ] || [ "$(getent passwd vagrant | cut -d: -f7)" != "/bin/bash" ]; then PROFILE_FILE="/home/vagrant/.profile"; fi
+    touch "$PROFILE_FILE"
+    sudo chown vagrant:vagrant "$PROFILE_FILE" # ownership
+
     if ! grep -q "alias k=" "$PROFILE_FILE"; then
         echo "alias k='kubectl'" >> "$PROFILE_FILE"
         if command -v bash &> /dev/null; then # Completion only works with bash
