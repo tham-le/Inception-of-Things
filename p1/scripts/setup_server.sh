@@ -18,18 +18,10 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     KUBE_CONFIG_PATH="/etc/rancher/k3s/k3s.yaml"
     SECONDS_WAITED=0
     while [ ! -f "${KUBE_CONFIG_PATH}" ]; do
-        # (add timeout logic like you did for the node-token)
         sleep 5
         SECONDS_WAITED=$((SECONDS_WAITED + 5))
         echo "Still waiting for kubeconfig (${SECONDS_WAITED}s)..."
     done
-    # Verify k3s.yaml exists and has correct permissions
-    KUBE_CONFIG_PATH="/etc/rancher/k3s/k3s.yaml"
-    if [ ! -f "${KUBE_CONFIG_PATH}" ]; then
-    echo "ERROR: ${KUBE_CONFIG_PATH} not found after K3s installation!"
-    # Optionally, check K3s service status: rc-service k3s status
-    exit 1
-    fi
     # K3S_KUBECONFIG_MODE should handle this, but an explicit chmod is safe.
     sudo chmod 644 "${KUBE_CONFIG_PATH}"
 
