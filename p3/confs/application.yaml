@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wil
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/cqin42/cqin_config.git" # mettre ici le repo de Github public avec le nom "TON-LOGIN_config"
+    targetRevision: HEAD
+    path: confs/app
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
