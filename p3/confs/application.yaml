@@ -1,14 +1,13 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: wil
-  namespace: argocd
+  name: wil42
 spec:
   project: default
   source:
     repoURL: "https://github.com/yboktaeva/yuboktae_config.git" # mettre ici le repo de Github public avec le nom "TON-LOGIN_config"
     targetRevision: HEAD
-    path: confs/app
+    path: manifests/
   destination:
     server: "https://kubernetes.default.svc"
     namespace: dev
@@ -16,3 +15,10 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+  ignoreDifferences:
+  - group: ""
+    kind: "Endpoints"
+    jsonPointers:
+    - /subsets
