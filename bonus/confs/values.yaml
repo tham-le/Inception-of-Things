@@ -1,0 +1,105 @@
+global:
+  hosts:
+    domain: localhost
+    https: false
+  edition: ce
+  ingress:
+    enabled: traefik
+  minio:
+    enabled: false
+  grafana:
+    enabled: false
+  kas:
+    enabled: false
+  registry:
+    enabled: false
+
+  appConfig:
+    artifacts:
+      enabled: false
+    lfs:
+      enabled: false
+    uploads:
+      enabled: false
+    packages:
+      enabled: false
+    backups:
+      enabled: false
+
+certmanager-issuer:
+  email: admin@localhost.com
+
+prometheus:
+  enabled: false
+
+nginx-ingress:
+  enabled: false
+
+gitlab-runner:
+  install: false
+
+registry:
+  install: false
+
+toolbox:
+  enabled: false
+
+migrations:
+  enabled: false
+  
+gitlab:
+  sidekiq:
+    resources:
+      requests:
+        memory: 2G
+        cpu: 900m
+      limits:
+        memory: 3G
+        cpu: 2
+    minReplicas: 1
+    maxReplicas: 1
+  webservice:
+    resources:
+      requests:
+        memory: 1.25G
+        cpu: 300m
+      limits:
+        memory: 2.5G
+        cpu: 600m
+    minReplicas: 1
+    maxReplicas: 1
+  gitaly:
+    persistence:
+      enabled: false
+    replicas: 1
+  toolbox:
+    enabled: false
+
+postgresql:
+  install: true
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  persistence:
+    enabled: false
+  metrics:
+    enabled: false
+
+redis:
+  install: true
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+  master:
+    persistence:
+      enabled: false
+  metrics:
+    enabled: false

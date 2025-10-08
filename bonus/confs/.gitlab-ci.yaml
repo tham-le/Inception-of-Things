@@ -1,0 +1,41 @@
+# GitLab CI/CD Pipeline for GitOps with ArgoCD
+# Minimal pipeline for validating and triggering deployments
+
+stages:
+  - validate
+  - deploy
+
+variables:
+  APP_NAME: "wil42"
+  APP_NAMESPACE: "dev"
+
+# ================================
+# Validate Stage
+# ================================
+validate-manifests:
+  stage: validate
+  image: alpine/k8s:1.28.0
+  script:
+    - echo "Validating Kubernetes manifests..."
+    - ls -la manifests/
+    - kubectl --dry-run=client --validate=true apply -f manifests/
+    - echo "All manifests are valid!"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# ================================
+# Deploy Stage - Trigger ArgoCD Sync
+# ================================
+trigger-argocd-sync:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Triggering ArgoCD sync for $APP_NAME..."
+    - echo "Commit: $CI_COMMIT_SHA"
+    - echo "Branch: $CI_COMMIT_REF_NAME"
+    - echo "Manifests updated! ArgoCD will detect and sync automatically."
+    - echo "Check ArgoCD UI: http://localhost:8080"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
