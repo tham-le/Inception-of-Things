@@ -19,6 +19,20 @@
 
 ### 2.  **Configure VM Settings (Before First Boot):**
 
+#### **2a. Pre-configure the Host-Only Network (Crucial Step!)**
+
+Before configuring the VM's settings, we must ensure the host-only network for SSH access does **not** conflict with the network required by the project (`192.168.56.x`). The default for this is 
+
+1. In the main VirtualBox window, go to the top menu: **File -> Tools -> Network Manager**.
+2. A "Host-only Networks" tab will appear. You will likely see an adapter named `vboxnet0`.
+3. Select `vboxnet0` and click **Properties**.
+4. **Change the IPv4 Address** from the default `192.168.56.1` to a non-conflicting address. A safe choice is **`192.168.57.1`**.
+5. Ensure the **IPv4 Network Mask** is `255.255.255.0`.
+6. Click the **DHCP Server** tab and **uncheck "Enable Server"**. This is not needed and it's cleaner to disable it.
+7. Click **Apply**. Now the `192.168.56.x` range is free for Vagrant to use.
+
+#### **2b. Configure VM Settings (Before First Boot):**
+
 *Select `Inception_Host_VM` -> "Settings".
 
 * **System > Processor:**
@@ -30,7 +44,7 @@
     *Click CD icon -> "Choose a disk file..." -> Select your Ubuntu Server ISO.
 * **Network:**
     * **Adapter 1:** `NAT` (for internet).
-    * **Adapter 2:** `Host-only Adapter` (e.g., `vboxnet0`) (for SSH from school PC).
+    * **Adapter 2:** `Host-only Adapter` (e.g., `vboxnet0`) (for SSH from school PC). This adapter now uses the safe `192.168.57.x` range.
 * **Shared Folders (Optional but Recommended):**
     *"+" -> **Folder Path:** Your project directory on school PC.
     * **Folder Name:** `project_files`.
