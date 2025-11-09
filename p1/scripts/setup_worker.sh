@@ -35,6 +35,7 @@ echo "Node token retrieved."
 echo "Installing K3s Agent..."
 # Using options from your friend's working example, plus --node-ip
 curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="agent --node-ip=${WORKER_IP} --flannel-iface eth1" K3S_URL=https://${SERVER_IP}:6443 K3S_TOKEN="${K3S_AGENT_TOKEN}" sh -s -
-echo "K3s agent installation script finished. Waiting for agent to connect..."
-sleep 15
+echo "K3s agent installation script finished."
+echo "Waiting for agent service to start..."
+sleep 10
 echo "K3s Agent provisioning complete."

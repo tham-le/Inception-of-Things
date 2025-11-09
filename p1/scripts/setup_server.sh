@@ -49,7 +49,8 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     # Install kubectl binary (project requirement)
     echo "Installing kubectl binary..."
     if ! command -v kubectl &> /dev/null || ! /usr/local/bin/kubectl version --client &> /dev/null; then
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+        curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
         rm kubectl
     fi

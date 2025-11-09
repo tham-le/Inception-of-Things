@@ -13,7 +13,7 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
 
     echo "Installing K3s Server..."
     # Using options from your friend's working example, plus --node-ip
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" K3S_KUBECONFIG_MODE="644" sh -s -
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP} --flannel-iface=eth1" K3S_KUBECONFIG_MODE="644" sh -s -
     echo "K3s server installation script finished. Waiting for services..."
     sleep 25 # Give K3s services time to start
 
@@ -51,7 +51,8 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     # Install kubectl binary (project requirement)
     echo "Installing kubectl binary..."
     if ! command -v kubectl &> /dev/null || ! /usr/local/bin/kubectl version --client &> /dev/null; then
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+        curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
         rm kubectl
     fi
@@ -105,7 +106,10 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     echo "Deploying ingress..."
     kubectl apply -f /vagrant/confs/ingress.yaml --kubeconfig="${KUBE_CONFIG_PATH}"
     
-    sleep 50
+    # Wait for deployments to be ready
+    echo "Waiting for deployments to be ready..."
+    kubectl wait --for=condition=available --timeout=300s deployment --all -n hello-kubernetes --kubeconfig="${KUBE_CONFIG_PATH}"
+    
     # Show status
     echo "Checking deployment status..."
     kubectl get pods,services,ingress --kubeconfig="${KUBE_CONFIG_PATH}"
