@@ -1,132 +1,196 @@
 #!/bin/bash
 set -e
 
-echo "=== Installing GitLab CE Locally ==="
+echo "=== BONUS: GitLab + ArgoCD Integration ==="
 
 # ================================
-# Install Helm if not present
+# 1. Prerequisites Check
+# ================================
+CLUSTER_NAME="mycluster"
+
+echo "Checking prerequisites..."
+if ! kubectl get namespace argocd &>/dev/null; then
+    echo "ERROR: ArgoCD not found. Run p3 setup first."
+    exit 1
+fi
+
+if ! k3d cluster list | grep -q "$CLUSTER_NAME"; then
+    echo "ERROR: k3d cluster $CLUSTER_NAME not found."
+    exit 1
+fi
+
+# Kill any existing port-forwards
+echo "Cleaning up old port-forwards..."
+pkill -f "port-forward.*argocd" 2>/dev/null || true
+pkill -f "port-forward.*gitlab" 2>/dev/null || true
+
+# ================================
+# 2. Install Helm (if needed)
 # ================================
 if ! command -v helm &> /dev/null; then
     echo "Installing Helm..."
     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-else
-    echo "Helm already installed: $(helm version --short)"
 fi
 
 # ================================
-# Create GitLab namespace
+# 3. Create GitLab Namespace
 # ================================
 echo "Creating GitLab namespace..."
 kubectl create namespace gitlab --dry-run=client -o yaml | kubectl apply -f -
 
 # ================================
-# Install GitLab via Helm chart
+# 4. Install GitLab with Helm
 # ================================
-echo "Adding GitLab Helm repository..."
-helm repo add gitlab https://charts.gitlab.io/ 2>/dev/null || echo "Repository already exists"
+echo "Installing GitLab (this takes 15-20 minutes)..."
+helm repo add gitlab https://charts.gitlab.io/ 2>/dev/null || true
 helm repo update
 
-# Show available resources
-echo "Current cluster resources:"
-kubectl top nodes || echo "Metrics server not available"
+# Get script directory for values.yaml
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VALUES_FILE="$(dirname "$SCRIPT_DIR")/confs/values.yaml"
 
-# Aggressively optimize ArgoCD resources for GitLab installation
-echo "Optimizing ArgoCD resources for GitLab installation..."
-if kubectl get namespace argocd >/dev/null 2>&1; then
-    echo "Scaling down ArgoCD components to free memory for GitLab..."
-    kubectl scale deployment argocd-server --replicas=1 -n argocd 2>/dev/null || echo "argocd-server not found"
-    kubectl scale deployment argocd-repo-server --replicas=1 -n argocd 2>/dev/null || echo "argocd-repo-server not found"
-    kubectl scale deployment argocd-dex-server --replicas=1 -n argocd 2>/dev/null || echo "argocd-dex-server not found"
-    kubectl scale deployment argocd-applicationset-controller --replicas=1 -n argocd 2>/dev/null || echo "argocd-applicationset-controller not found"
-    kubectl scale deployment argocd-notifications-controller --replicas=1 -n argocd 2>/dev/null || echo "argocd-notifications-controller not found"
-    kubectl scale deployment argocd-redis --replicas=1 -n argocd 2>/dev/null || echo "argocd-redis not found"
-    
-    # Clean up problematic ArgoCD pods
-    echo "Cleaning up problematic ArgoCD pods..."
-    kubectl delete pods --field-selector=status.phase=Failed -n argocd 2>/dev/null || echo "No failed ArgoCD pods"
-    kubectl delete pods --field-selector=status.phase=Succeeded -n argocd 2>/dev/null || echo "No completed ArgoCD pods"
-    
-    # Force delete stuck pods
-    kubectl get pods -n argocd | grep -E "Evicted|ImagePullBackOff|Error|Completed" | awk '{print $1}' | xargs -r kubectl delete pod -n argocd --force --grace-period=0 2>/dev/null || echo "No stuck pods to force delete"
-    
-    echo "Waiting 30 seconds for ArgoCD cleanup to complete..."
-    sleep 30
-fi
-
-# ================================
-# Check available resources before GitLab installation
-# ================================
-echo "Checking available cluster resources..."
-AVAILABLE_MEMORY=$(kubectl top nodes 2>/dev/null | awk 'NR>1 {gsub(/[^0-9]/, "", $4); print $4}' | head -1)
-if [ ! -z "$AVAILABLE_MEMORY" ] && [ "$AVAILABLE_MEMORY" -lt 1000 ]; then
-    echo "WARNING: Very low memory available ($AVAILABLE_MEMORY Mi). GitLab installation may fail."
-    echo "Consider freeing up more resources or increasing cluster memory."
-fi
-
-# ================================
-# Install GitLab with custom values
-# ================================
-echo "Installing GitLab CE (extremely minimal for resource-constrained environments)..."
-echo "Note: This installation uses minimal resources and may have limited performance"
 helm upgrade --install gitlab gitlab/gitlab \
   --namespace gitlab \
   --timeout 1800s \
-  --values ./confs/values.yaml
+  --values "$VALUES_FILE"
 
 # ================================
-# Wait for GitLab to be ready
+# 5. Wait for GitLab
 # ================================
-echo "Waiting for GitLab pods to be ready (this may take 15-20 minutes with minimal resources)..."
-kubectl wait --for=condition=Ready pod -l app=webservice --timeout=120s -n gitlab || echo "Webservice may still be starting..."
+echo "Waiting for GitLab pods to be ready..."
+echo "This may take 10-15 minutes..."
+
+# Wait for webservice specifically
+kubectl wait --for=condition=Ready pod \
+  -l app=webservice \
+  -n gitlab \
+  --timeout=900s || {
+    echo "WARNING: Some pods may still be initializing"
+    echo "Checking pod status..."
+    kubectl get pods -n gitlab
+  }
+
+# Give it extra time to stabilize
+echo "Allowing pods to stabilize..."
+sleep 30
 
 # ================================
-# Post-installation cleanup
+# 6. Setup Persistent Port-Forward for GitLab
 # ================================
-# echo "Performing post-installation cleanup..."
-# Clean up any failed pods that might have appeared during installation
-# kubectl delete pods --field-selector=status.phase=Failed -n gitlab 2>/dev/null || echo "No failed GitLab pods to clean"
+echo "Setting up persistent port-forward for GitLab..."
 
-# Show final resource usage
-echo "Final cluster resource usage:"
-kubectl top nodes || echo "Metrics server not available"
-kubectl get pods -n gitlab --no-headers | wc -l | xargs -I {} echo "GitLab pods running: {}"
-kubectl get pods -n argocd --no-headers | grep Running | wc -l | xargs -I {} echo "ArgoCD pods running: {}"
-
-# ================================
-# Expose GitLab
-# ================================
-echo "Exposing GitLab service..."
-echo "Note: Configure VirtualBox port forwarding for GitLab access:"
-echo "  Host Port 8082 → Guest Port 8082"
-# Create log directory if it doesn't exist
-sudo mkdir -p /var/log
-sudo touch /var/log/gitlab-webserver.log
-sudo chmod 666 /var/log/gitlab-webserver.log
-kubectl port-forward service/gitlab-webservice-default 8082:8181 -n gitlab --address="0.0.0.0" > /var/log/gitlab-webserver.log 2>&1 &
-
-# ================================
-# Get GitLab credentials
-# ================================
-echo "Getting GitLab root password..."
-echo "GitLab URL: http://localhost:8082"
-echo "Username: root"
-
-# Wait for secret to be available
-MAX_ATTEMPTS=20
-ATTEMPT=0
-while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    ATTEMPT=$((ATTEMPT + 1))
-    if kubectl get secret gitlab-gitlab-initial-root-password -n gitlab >/dev/null 2>&1; then
-        echo -n "Password: "
-        kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -ojsonpath='{.data.password}' | base64 --decode
-        echo ""
-        break
-    fi
-    echo "Waiting for GitLab secret to be created... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
-    sleep 15
+# Create a background port-forward with auto-restart
+cat > /tmp/gitlab_portforward.sh <<'EOF'
+#!/bin/bash
+while true; do
+  echo "[$(date)] Starting GitLab port-forward..."
+  kubectl port-forward service/gitlab-webservice-default 8082:8181 \
+    -n gitlab \
+    --address="0.0.0.0" 2>&1 | tee -a /tmp/gitlab_portforward.log
+  echo "[$(date)] Port-forward died, restarting in 5s..."
+  sleep 5
 done
+EOF
 
-echo "=== GitLab Setup Complete ==="
-echo "Access GitLab at: http://localhost:8082"
-echo "Login with username 'root' and the password shown above"
-echo "Next: Run configure_gitlab_projetc.sh to set up wil42-config repository"
+chmod +x /tmp/gitlab_portforward.sh
+nohup /tmp/gitlab_portforward.sh > /dev/null 2>&1 &
+GITLAB_PF_PID=$!
+echo "GitLab port-forward running (PID: $GITLAB_PF_PID)"
+
+# ================================
+# 7. Setup Persistent Port-Forward for ArgoCD
+# ================================
+echo "Setting up persistent port-forward for ArgoCD..."
+
+cat > /tmp/argocd_portforward.sh <<'EOF'
+#!/bin/bash
+while true; do
+  echo "[$(date)] Starting ArgoCD port-forward..."
+  kubectl port-forward svc/argocd-server 8080:443 \
+    -n argocd \
+    --address="0.0.0.0" 2>&1 | tee -a /tmp/argocd_portforward.log
+  echo "[$(date)] Port-forward died, restarting in 5s..."
+  sleep 5
+done
+EOF
+
+chmod +x /tmp/argocd_portforward.sh
+nohup /tmp/argocd_portforward.sh > /dev/null 2>&1 &
+ARGOCD_PF_PID=$!
+echo "ArgoCD port-forward running (PID: $ARGOCD_PF_PID)"
+
+# Save PIDs for cleanup
+echo "$GITLAB_PF_PID" > /tmp/gitlab_pf.pid
+echo "$ARGOCD_PF_PID" > /tmp/argocd_pf.pid
+
+# Wait for port-forwards to be ready
+echo "Waiting for services to be accessible..."
+sleep 10
+
+# ================================
+# 8. Setup Git Repository
+# ================================
+echo "Setting up local Git repository..."
+REPO_DIR="/tmp/wil42-config"
+rm -rf $REPO_DIR
+mkdir -p $REPO_DIR/manifests
+
+CONFS_DIR="$(dirname "$SCRIPT_DIR")/confs"
+cp $CONFS_DIR/manifests/* $REPO_DIR/manifests/ 2>/dev/null || echo "No manifests found"
+[ -f "$CONFS_DIR/.gitlab-ci.yaml" ] && cp "$CONFS_DIR/.gitlab-ci.yaml" $REPO_DIR/.gitlab-ci.yaml
+
+cd $REPO_DIR
+git config --global init.defaultBranch main
+git config --global user.email "yuboktae@student.42.fr"
+git config --global user.name "yuboktae"
+git init
+git add .
+git commit -m "Initial commit"
+
+# ================================
+# 9. Create dev namespace
+# ================================
+echo "Creating dev namespace..."
+kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+
+# ================================
+# 10. Deploy ArgoCD Application
+# ================================
+echo "Creating ArgoCD application..."
+kubectl apply -f "$CONFS_DIR/application.yaml" -n argocd
+
+# ================================
+# 11. Get Credentials
+# ================================
+echo ""
+echo "=== SETUP COMPLETE ==="
+echo ""
+echo "GitLab Access:"
+echo "  URL: http://localhost:8082"
+echo "  Username: root"
+echo "  Password: (retrieving...)"
+sleep 5
+GITLAB_PASS=$(kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -ojsonpath='{.data.password}' | base64 --decode 2>/dev/null || echo "Run this to get password: kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -ojsonpath='{.data.password}' | base64 --decode")
+echo "  Password: $GITLAB_PASS"
+echo ""
+echo "ArgoCD Access:"
+echo "  URL: https://localhost:8080"
+echo "  Username: admin"
+ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d 2>/dev/null || echo "Not available")
+echo "  Password: $ARGOCD_PASS"
+echo ""
+echo "Next Steps:"
+echo "1. Access GitLab at http://localhost:8082"
+echo "2. Create project 'wil42-config'"
+echo "3. Push the repository:"
+echo "   cd $REPO_DIR"
+echo "   git remote add origin http://localhost:8082/root/wil42-config.git"
+echo "   git push -u origin main"
+echo ""
+echo "Repository ready at: $REPO_DIR"
+echo ""
+echo "Port-forward logs:"
+echo "  GitLab: tail -f /tmp/gitlab_portforward.log"
+echo "  ArgoCD: tail -f /tmp/argocd_portforward.log"
+echo ""
+echo "To stop port-forwards: kill \$(cat /tmp/gitlab_pf.pid) \$(cat /tmp/argocd_pf.pid)"
