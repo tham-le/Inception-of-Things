@@ -81,7 +81,7 @@ helm upgrade --install gitlab gitlab/gitlab \
 # 5. Wait for GitLab
 # ================================
 echo "Waiting for GitLab pods to be ready..."
-echo "⏳ This may take 15-30 minutes on low-resource machines..."
+echo "This may take 15-30 minutes on low-resource machines..."
 echo "   You can monitor progress with: kubectl get pods -n gitlab -w"
 
 # Wait for webservice specifically (with longer timeout for low resources)

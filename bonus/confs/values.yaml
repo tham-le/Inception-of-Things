@@ -1,25 +1,49 @@
 # Charts config: https://docs.gitlab.com/charts/charts/
 # Global config: https://docs.gitlab.com/charts/charts/globals/  
 # Minimal config
+
 global:
   edition: ce
   hosts:
     domain: localhost
-    https: false
+  
   ingress:
-    class: traefik 
+    enabled: false
+    class: traefik
+    configureCertmanager: false
+    
+  image:
+    pullPolicy: IfNotPresent
 
+  # Disable optional global services
   kas:
-    # GitLab Kubernetes Agent Server (KAS) - GitOps, Kubernetes, ...
-    # https://docs.gitlab.com/charts/charts/gitlab/kas/
     enabled: false
-  registry:
-    # Docker images register
-    enabled: false
+  
   grafana:
     enabled: false
-  prometheus:
+  
+  minio:
     enabled: false
+
+  appConfig:
+    lfs:
+      enabled: false
+      bucket: git-lfs
+    artifacts:
+      enabled: false
+      bucket: gitlab-artifacts
+    uploads:
+      enabled: false
+      bucket: gitlab-uploads
+    packages:
+      enabled: false
+      bucket: gitlab-packages
+    externalDiffs:
+      enabled: false
+    terraformState:
+      enabled: false
+    dependencyProxy:
+      enabled: false
 
 certmanager-issuer:
   email: admin@localhost.com
@@ -27,74 +51,75 @@ certmanager-issuer:
 nginx-ingress:
   enabled: false
 
+# Disable registry at top level
+registry:
+  enabled: false
+
+# Disable prometheus at top level
+prometheus:
+  install: false
+
+# Disable GitLab Runner at top level
+gitlab-runner:
+  install: false
+
 gitlab:
   gitlab-shell:
-    # Git SSH access to Gitlab
-    # https://docs.gitlab.com/charts/charts/gitlab/gitlab-shell/
     service:
       type: NodePort
-      NodePort: 32222
+      nodePort: 32222
     replicas: 1
+    maxReplicas: 1
+    minReplicas: 1
     resources:
       requests:
+        memory: 64Mi
+        cpu: 25m
+      limits:
         memory: 128Mi
         cpu: 50m
-      limits:
-        memory: 256Mi
-        cpu: 100m
-
 
   gitaly:
-    # handles Git repository storage & access
     replicas: 1
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        memory: 100Mi
+        cpu: 50m
+      limits:
+        memory: 200Mi
+        cpu: 100m
 
   webservice:
-    # https://docs.gitlab.com/charts/charts/gitlab/webservice/
-    # 1000m = 1 Full Core (200m ~ 20 % of a core)
     replicas: 1
+    maxReplicas: 1
+    minReplicas: 1
+    workerProcesses: 1
     resources:
-      # https://docs.gitlab.com/charts/charts/gitlab/webservice/#resources
       requests:
-        memory: 512Mi
-        cpu: 200m
+        memory: 300Mi
+        cpu: 100m
       limits:
-        memory: 1Gi
-        cpu: 400m
+        memory: 600Mi
+        cpu: 200m
 
   sidekiq:
-    # background jobs, e.g., sending emails, cleaning data
-    # https://docs.gitlab.com/charts/charts/gitlab/sidekiq/
     replicas: 1
+    maxReplicas: 1
+    minReplicas: 1
     resources:
-      # https://docs.gitlab.com/charts/charts/gitlab/sidekiq/#resources
       requests:
-        memory: 512Mi
-        cpu: 200m
+        memory: 300Mi
+        cpu: 100m
       limits:
-        memory: 1Gi
-        cpu: 400m
+        memory: 600Mi
+        cpu: 200m
 
   migrations:
-    resources:
-      requests:
-        memory: 256Mi
-        cpu: 100m
-      limits:
-        memory: 512Mi
-        cpu: 200m
-
-  postgresql:
-    install: true
-    resources:
-      requests:
-        memory: 256Mi
-        cpu: 100m
-      limits:
-        memory: 512Mi
-        cpu: 200m
-
-  redis:
-    install: true
+    replicas: 1
+    maxReplicas: 1
+    minReplicas: 1
     resources:
       requests:
         memory: 128Mi
@@ -103,11 +128,35 @@ gitlab:
         memory: 256Mi
         cpu: 100m
 
-  kas:
-    install: false
-  minio:
-    install: false
-  registry:
-    install: false
-  gitlab-runner:
-    install: false
+  # Disable optional gitlab components
+  gitlab-exporter:
+    enabled: false
+  
+  toolbox:
+    enabled: false
+
+postgresql:
+  install: true
+  primary:
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 50m
+      limits:
+        memory: 256Mi
+        cpu: 100m
+
+redis:
+  install: true
+  master:
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 25m
+      limits:
+        memory: 128Mi
+        cpu: 50m
