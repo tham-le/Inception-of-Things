@@ -29,12 +29,16 @@ Set up two virtual machines with K3s cluster (controller + worker node).
 
 ```bash
 cd p1
+vagrant destroy -f
 vagrant up
 vagrant ssh thi-leS
-
+hostname
 # Verify cluster
 kubectl get nodes -o wide
 exit
+
+vagrant ssh thi-leSW
+hostname
 ```
 
 **Expected**: Two nodes (thi-leS as control-plane, thi-leSW as worker) with IPs 192.168.56.110 and 192.168.56.111.
