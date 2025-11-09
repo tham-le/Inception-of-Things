@@ -97,7 +97,6 @@ kubectl wait --for=condition=Ready pod -l app=webservice --timeout=1200s -n gitl
 echo "Performing post-installation cleanup..."
 # Clean up any failed pods that might have appeared during installation
 kubectl delete pods --field-selector=status.phase=Failed -n gitlab 2>/dev/null || echo "No failed GitLab pods to clean"
-kubectl delete pods --field-selector=status.phase=Succeeded -n gitlab 2>/dev/null || echo "No completed GitLab pods to clean"
 
 # Show final resource usage
 echo "Final cluster resource usage:"

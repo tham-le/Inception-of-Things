@@ -23,13 +23,7 @@ if [ "$AVAILABLE_SPACE" -lt "$REQUIRED_SPACE" ]; then
         docker builder prune -a -f 2>/dev/null || true
     fi
     
-    # Clean k3d
-    if command -v k3d &> /dev/null; then
-        echo "Cleaning existing k3d clusters..."
-        k3d cluster delete --all 2>/dev/null || true
-    fi
-    
-    # Clean kubectl
+    # Clean kubectl cache
     if command -v kubectl &> /dev/null; then
         echo "Cleaning kubectl cache..."
         rm -rf ~/.kube/cache 2>/dev/null || true
@@ -96,14 +90,6 @@ fi
 # ================================
 # Clean up resources and install ArgoCD
 # ================================
-echo "Checking for resource issues and cleaning up if needed..."
-if kubectl get pods -n argocd 2>/dev/null | grep -q "Evicted\|Pending\|ContainerStatusUnknown"; then
-    echo "Detected resource issues with ArgoCD. Running emergency cleanup..."
-    ./scripts/emergency_cleanup.sh
-else
-    echo "No resource issues detected, proceeding with ArgoCD installation..."
-fi
-
 # Check if ArgoCD CLI is already installed
 if ! command -v argocd &> /dev/null; then
     echo "Install ArgoCD CLI..."

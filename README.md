@@ -220,7 +220,7 @@ Implement GitOps workflow with ArgoCD for continuous deployment
     *   **Expected Result:** The status must be **Healthy** and **Synced**.
 
 2.  **Verify Application v1:**
-    *   Open a new tab and go to `http://wil.com`.
+    *    `curl http://localhost:8888/`.
     *   **Expected Result:**  JSON response: `{"status":"ok", "message": "v1"}`.
 
 ---
@@ -245,8 +245,7 @@ Implement GitOps workflow with ArgoCD for continuous deployment
     *   Wait for the status to become **Healthy** and **Synced** again.
 
 4.  **Verify Final Result:**
-    *   Switch to the application tab (`http://wil.com`).
-    *   Refresh the page.
+    *  ` curl http://localhost:8888/`
     *   **Expected Result:** The JSON response now shows: `{"status":"ok", "message": "v2"}`.
 
 ---

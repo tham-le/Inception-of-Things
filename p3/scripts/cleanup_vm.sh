@@ -12,18 +12,7 @@ echo -e "\nDisk space:"
 df -h / | head -2
 
 # ================================
-# 1. Delete failed pods 
-# ================================
-echo -e "\n=== 1. KUBERNETES CLEANUP ==="
-if command -v kubectl &> /dev/null; then
-    echo "Deleting failed pods..."
-    kubectl delete pods --all -n argocd --force --grace-period=0 2>/dev/null || true
-    kubectl delete pods --field-selector=status.phase=Failed --all-namespaces 2>/dev/null || true
-    kubectl delete pods --field-selector=status.phase=Succeeded --all-namespaces 2>/dev/null || true
-fi
-
-# ================================
-# 2. Docker Cleanup
+# 1. Docker Cleanup
 # ================================
 echo -e "\n=== 2. DOCKER CLEANUP ==="
 if command -v docker &> /dev/null; then
@@ -50,17 +39,7 @@ if command -v docker &> /dev/null; then
 fi
 
 # ================================
-# 3. K3D Cleanup
-# ================================
-echo -e "\n=== 3. K3D CLEANUP ==="
-if command -v k3d &> /dev/null; then
-    echo "Removing all k3d clusters..."
-    k3d cluster delete --all 2>/dev/null || true
-    k3d registry delete --all 2>/dev/null || true
-fi
-
-# ================================
-# 4. System Cleanup
+# 2. System Cleanup
 # ================================
 echo -e "\n=== 4. SYSTEM CLEANUP ==="
 
@@ -90,7 +69,7 @@ echo "Removing old kernels..."
 sudo apt-get autoremove --purge -y $(dpkg -l 'linux-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | head -n -1) 2>/dev/null || true
 
 # ================================
-# 5. Remove non-essential programs
+# 3. Remove non-essential programs
 # ================================
 echo -e "\n=== 5. REMOVING NON-ESSENTIAL PROGRAMS ==="
 
@@ -121,7 +100,7 @@ for program in $programs_to_remove; do
 done
 
 # ================================
-# 6. Memory optimization
+# 4. Memory optimization
 # ================================
 echo -e "\n=== 6. MEMORY OPTIMIZATION ==="
 
