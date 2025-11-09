@@ -58,21 +58,25 @@ helm upgrade --install gitlab gitlab/gitlab \
 # 5. Wait for GitLab
 # ================================
 echo "Waiting for GitLab pods to be ready..."
-echo "This may take 10-15 minutes..."
+echo "⏳ This may take 15-30 minutes on low-resource machines..."
+echo "   You can monitor progress with: kubectl get pods -n gitlab -w"
 
-# Wait for webservice specifically
+# Wait for webservice specifically (with longer timeout for low resources)
 kubectl wait --for=condition=Ready pod \
   -l app=webservice \
   -n gitlab \
-  --timeout=900s || {
-    echo "WARNING: Some pods may still be initializing"
+  --timeout=1800s || {
+    echo "⚠️  WARNING: Some pods may still be initializing (this is normal on slow machines)"
     echo "Checking pod status..."
     kubectl get pods -n gitlab
+    echo ""
+    echo "If pods are in 'Pending' or 'ContainerCreating', just wait a bit longer."
+    echo "If pods are 'CrashLoopBackOff', you may need more RAM."
   }
 
 # Give it extra time to stabilize
-echo "Allowing pods to stabilize..."
-sleep 30
+echo "Allowing pods to stabilize (this ensures GitLab is fully ready)..."
+sleep 60
 
 # ================================
 # 6. Setup Persistent Port-Forward for GitLab
