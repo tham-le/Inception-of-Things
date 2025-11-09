@@ -38,13 +38,6 @@ sudo apt-get remove -y virtualbox virtualbox-ext-pack virtualbox-dkms
 # Note: The version of virtualbox in standard Ubuntu repos might be slightly older.
 # For latest, see: https://www.virtualbox.org/wiki/Linux_Downloads
 sudo apt-get install -y virtualbox virtualbox-dkms
-# Attempt to install extension pack (might require manual download/accept license if not fully non-interactive)
-# As an alternative, download and install manually if this fails:
-# VBOX_VERSION=$(vboxmanage --version | cut -dr -f1)
-# VBOX_EXT_PACK_URL="https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/Oracle_VM_VirtualBox_Extension_Pack-${VBOX_VERSION}.vbox-extpack"
-# wget -q "${VBOX_EXT_PACK_URL}" -O /tmp/Oracle_VM_VirtualBox_Extension_Pack.vbox-extpack
-# echo "y" | sudo vboxmanage extpack install /tmp/Oracle_VM_VirtualBox_Extension_Pack.vbox-extpack --replace || echo "VBox Ext Pack install might have failed or already installed."
-# rm -f /tmp/Oracle_VM_VirtualBox_Extension_Pack.vbox-extpack
 
 echo "VirtualBox version:"
 vboxmanage --version || echo "VirtualBox not found or failed to get version."
@@ -126,14 +119,6 @@ k3d version
 # --- Install cpu-checker (to verify nested virtualization) ---
 echo ">>> Installing cpu-checker..."
 sudo apt-get install -y cpu-checker
-
-# # --- Ensure vagrant user exists ---
-# if ! id vagrant &>/dev/null; then
-#   echo ">>> Creating 'vagrant' user..."
-#   sudo useradd -m -s /bin/bash vagrant
-#   echo "vagrant:vagrant" | sudo chpasswd
-#   sudo usermod -aG sudo vagrant
-# fi
 
 # --- Add vagrant user to necessary groups ---
 echo ">>> Adding 'vagrant' user to 'docker' and 'vboxusers' groups..."
