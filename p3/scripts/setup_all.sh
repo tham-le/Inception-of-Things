@@ -132,7 +132,7 @@ kubectl apply -f confs/application.yaml -n argocd
 # expose agrocd
 echo "waiting for argocd pods to start.."
 kubectl wait --for=condition=Ready pods --all --timeout=300s -n argocd
-kubectl port-forward svc/argocd-server -n argocd 8080:443 --address="0.0.0.0" 2>&1 > /tmp/argocd-log &
+kubectl port-forward svc/argocd-server -n argocd 8080:443 --address="0.0.0.0" > /tmp/argocd-log 2>&1 &
 
 # ================================
 # Fin
