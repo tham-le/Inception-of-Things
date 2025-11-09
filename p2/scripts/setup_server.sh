@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+
 SERVER_HOSTNAME="thi-leS"
 SERVER_IP="192.168.56.110"
 echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
@@ -69,6 +70,9 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     fi
     # Add alias and completion to .bashrc (if bash is default) or .profile
     PROFILE_FILE="/home/vagrant/.bashrc"; if [ ! -f "$PROFILE_FILE" ] || [ "$(getent passwd vagrant | cut -d: -f7)" != "/bin/bash" ]; then PROFILE_FILE="/home/vagrant/.profile"; fi
+    touch "$PROFILE_FILE"
+    sudo chown vagrant:vagrant "$PROFILE_FILE" # ownership
+    
     if ! grep -q "alias k=" "$PROFILE_FILE"; then
         echo "alias k='kubectl'" >> "$PROFILE_FILE"
         if command -v bash &> /dev/null; then # Completion only works with bash

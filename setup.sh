@@ -72,7 +72,7 @@ echo ">>> Installing Docker..."
 if command -v docker &> /dev/null; then
   echo "Docker is already installed: $(docker --version)"
 else
-  echo "Docker not found, insatlling..."
+  echo "Docker not found, installing..."
   # Add Docker's official GPG key (only if missing):
   if [ ! -f /etc/apt/keyrings/docker.asc ]; then
     sudo install -m 0755 -d /etc/apt/keyrings
@@ -97,7 +97,7 @@ echo ">>> Installing kubectl..."
 if command -v kubectl &> /dev/null; then
   echo "kubectl is already installed: $(kubectl version)"
 else
-  echo "Downloading latest stble kubectl..."
+  echo "Downloading latest stable kubectl..."
   KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
   curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
   if [ -f kubectl ]; then
@@ -116,7 +116,7 @@ echo ">>> Installing k3d..."
 if command -v k3d &> /dev/null; then
   echo "k3d is already installed: $(k3d version)"
 else
-  echo "Downloading latest stble k3d..."
+  echo "Downloading latest stable k3d..."
   # Using wget for better error handling in scripts
   wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 fi

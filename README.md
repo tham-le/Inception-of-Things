@@ -5,6 +5,7 @@ A System Administration project focused on learning Kubernetes fundamentals usin
 ## 🎯 Overview
 
 This project introduces Kubernetes concepts through practical implementation using:
+
 - **K3s**: Lightweight Kubernetes distribution
 - **K3d**: K3s in Docker for local development
 - **Vagrant**: Virtual machine management
@@ -12,7 +13,7 @@ This project introduces Kubernetes concepts through practical implementation usi
 
 ## 📁 Project Structure
 
-```
+```text
 inception-of-things/
 ├── p1/          # K3s with Vagrant (2 VMs)
 ├── p2/          # K3s with 3 applications
@@ -57,10 +58,12 @@ exit
 ```
 
 **Test from host** (add to `/etc/hosts` first):
-```
+
+```text
 192.168.56.110 app1.com app2.com app3.com
 ```
-**Test with curl from your Inception_Host_VM**
+
+#### Test with curl from your Inception_Host_VM
 
 ```bash
 # Test App 1
