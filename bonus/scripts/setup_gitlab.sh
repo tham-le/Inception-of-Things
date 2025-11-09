@@ -26,18 +26,6 @@ echo "Adding GitLab Helm repository..."
 helm repo add gitlab https://charts.gitlab.io/ 2>/dev/null || echo "Repository already exists"
 helm repo update
 
-# ================================
-# Clean previous installation and free resources
-# ================================
-echo "Cleaning any previous GitLab installation..."
-helm uninstall gitlab -n gitlab 2>/dev/null || echo "No previous installation found"
-kubectl delete pvc --all -n gitlab 2>/dev/null || echo "No PVCs to delete"
-
-echo "Checking cluster resources and cleaning up failed pods..."
-# Clean up evicted, failed, and completed pods to free resources
-kubectl delete pods --field-selector=status.phase=Failed --all-namespaces 2>/dev/null || echo "No failed pods to clean"
-kubectl delete pods --field-selector=status.phase=Succeeded --all-namespaces 2>/dev/null || echo "No completed pods to clean"
-
 # Show available resources
 echo "Current cluster resources:"
 kubectl top nodes || echo "Metrics server not available"
@@ -89,14 +77,14 @@ helm upgrade --install gitlab gitlab/gitlab \
 # Wait for GitLab to be ready
 # ================================
 echo "Waiting for GitLab pods to be ready (this may take 15-20 minutes with minimal resources)..."
-kubectl wait --for=condition=Ready pod -l app=webservice --timeout=1200s -n gitlab || echo "Webservice may still be starting..."
+kubectl wait --for=condition=Ready pod -l app=webservice --timeout=120s -n gitlab || echo "Webservice may still be starting..."
 
 # ================================
 # Post-installation cleanup
 # ================================
-echo "Performing post-installation cleanup..."
+# echo "Performing post-installation cleanup..."
 # Clean up any failed pods that might have appeared during installation
-kubectl delete pods --field-selector=status.phase=Failed -n gitlab 2>/dev/null || echo "No failed GitLab pods to clean"
+# kubectl delete pods --field-selector=status.phase=Failed -n gitlab 2>/dev/null || echo "No failed GitLab pods to clean"
 
 # Show final resource usage
 echo "Final cluster resource usage:"

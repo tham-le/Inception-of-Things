@@ -104,6 +104,12 @@ else
 fi
 
 # ================================
+# Create argocd namespace
+# ================================
+echo "Creating argocd namespace..."
+kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+
+# ================================
 # Install GitLab
 # ================================
 echo ""
@@ -117,17 +123,17 @@ echo ""
 echo "=== 2. WAITING FOR GITLAB TO BE READY ==="
 
 # Check GitLab readiness
-MAX_ATTEMPTS=30
+MAX_ATTEMPTS=5
 ATTEMPT=0
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     ATTEMPT=$((ATTEMPT + 1))
     if kubectl get pods -n gitlab | grep gitlab-webservice | grep -q Running; then
         echo "GitLab webservice is running!"
-        sleep 30  # Give it extra time to fully initialize
+        sleep 5  # Give it extra time to fully initialize
         break
     fi
     echo "Waiting for GitLab... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
-    sleep 30
+    sleep 5
 done
 
 if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then

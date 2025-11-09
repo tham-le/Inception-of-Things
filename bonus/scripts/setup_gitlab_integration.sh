@@ -3,25 +3,6 @@ set -e
 
 echo "=== GitLab + ArgoCD Integration Setup ==="
 
-# ================================
-# Prerequisites check
-# ================================
-if ! command -v argocd &> /dev/null; then
-    echo "Warning: ArgoCD CLI not found. Installing..."
-    VERSION=$(curl -L -s https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION)
-    curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$VERSION/argocd-linux-amd64
-    sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-    rm argocd-linux-amd64
-fi
-
-if ! kubectl get namespace argocd >/dev/null 2>&1; then
-    echo "ArgoCD namespace not found. Installing ArgoCD..."
-    kubectl create namespace argocd
-    kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-    echo "Waiting for ArgoCD to be ready..."
-    kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
-fi
-
 # Check if ArgoCD CRDs are available
 if ! kubectl get crd applications.argoproj.io >/dev/null 2>&1; then
     echo "ArgoCD CRDs not found. Installing CRDs..."
@@ -30,7 +11,6 @@ if ! kubectl get crd applications.argoproj.io >/dev/null 2>&1; then
     kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/crds/appproject-crd.yaml
     sleep 10
 fi
-
 
 # Check if GitLab is running
 if ! kubectl get pods -n gitlab | grep -q "gitlab-webservice"; then
@@ -74,7 +54,7 @@ fi
 
 # Copy GitLab CI configuration
 if [ -f "$CONFS_DIR/.gitlab-ci.yaml" ]; then
-    cp $CONFS_DIR/.gitlab-ci.yaml $REPO_DIR/.gitlab-ci.yml
+    cp $CONFS_DIR/.gitlab-ci.yaml $REPO_DIR/.gitlab-ci.yaml
     echo "Copied GitLab CI configuration"
 fi
 
