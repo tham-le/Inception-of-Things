@@ -7,22 +7,45 @@ echo "=== BONUS: GitLab + ArgoCD Integration ==="
 # 1. Prerequisites Check
 # ================================
 CLUSTER_NAME="mycluster"
+NAMESPACE="argocd"
 
 echo "Checking prerequisites..."
-if ! kubectl get namespace argocd &>/dev/null; then
-    echo "ERROR: ArgoCD not found. Run p3 setup first."
-    exit 1
+
+if k3d cluster list | grep -q "$CLUSTER_NAME"; then
+    echo "k3d cluster $CLUSTER_NAME already created."
+else
+    echo "Create cluster $CLUSTER_NAME..."
+    k3d cluster create $CLUSTER_NAME --wait \
+        --port "8888:30080@loadbalancer" \
+        --port "80:80@loadbalancer" \
+        --port "443:443@loadbalancer" \
+        --k3s-arg "--kubelet-arg=eviction-hard=imagefs.available<100Mi,nodefs.available<100Mi@server:0"
 fi
 
-if ! k3d cluster list | grep -q "$CLUSTER_NAME"; then
-    echo "ERROR: k3d cluster $CLUSTER_NAME not found."
-    exit 1
+if ! command -v argocd &> /dev/null; then
+    echo "Install ArgoCD CLI..."
+    # Option 1: Use latest stable version (more reliable)
+    VERSION=$(curl -L -s https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION)
+    curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$VERSION/argocd-linux-amd64
+    
+    sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+    rm argocd-linux-amd64
+else
+    echo "[OK] ArgoCD CLI already installed : $(argocd version --client --short 2>/dev/null || echo 'version unknown')"
 fi
+
+
 
 # Kill any existing port-forwards
 echo "Cleaning up old port-forwards..."
 pkill -f "port-forward.*argocd" 2>/dev/null || true
 pkill -f "port-forward.*gitlab" 2>/dev/null || true
+
+# Clean up old GitLab installation
+echo "Cleaning up old GitLab installation..."
+helm uninstall gitlab -n gitlab 2>/dev/null || true
+kubectl delete namespace gitlab --timeout=60s 2>/dev/null || true
+sleep 5
 
 # ================================
 # 2. Install Helm (if needed)
@@ -65,8 +88,8 @@ echo "   You can monitor progress with: kubectl get pods -n gitlab -w"
 kubectl wait --for=condition=Ready pod \
   -l app=webservice \
   -n gitlab \
-  --timeout=1800s || {
-    echo "⚠️  WARNING: Some pods may still be initializing (this is normal on slow machines)"
+  --timeout=500s || {
+    echo "WARNING: Some pods may still be initializing"
     echo "Checking pod status..."
     kubectl get pods -n gitlab
     echo ""
@@ -161,6 +184,13 @@ kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
 # 10. Deploy ArgoCD Application
 # ================================
 echo "Creating ArgoCD application..."
+
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+echo "Deploy application directly to dev namespace..."
+kubectl apply -f "$CONFS_DIR/manifests/" -n dev
+
+echo "Deploy ArgoCD application configuration..."
 kubectl apply -f "$CONFS_DIR/application.yaml" -n argocd
 
 # ================================

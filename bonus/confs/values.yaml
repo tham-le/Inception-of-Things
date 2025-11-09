@@ -13,9 +13,6 @@ global:
     # GitLab Kubernetes Agent Server (KAS) - GitOps, Kubernetes, ...
     # https://docs.gitlab.com/charts/charts/gitlab/kas/
     enabled: false
-  #minio:
-    # Storage objects
-    # enabled: false
   registry:
     # Docker images register
     enabled: false
@@ -37,6 +34,15 @@ gitlab:
     service:
       type: NodePort
       NodePort: 32222
+    replicas: 1
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 50m
+      limits:
+        memory: 256Mi
+        cpu: 100m
+
 
   gitaly:
     # handles Git repository storage & access
@@ -49,11 +55,11 @@ gitlab:
     resources:
       # https://docs.gitlab.com/charts/charts/gitlab/webservice/#resources
       requests:
-        memory: 1.5G
-        cpu: 400m
+        memory: 512Mi
+        cpu: 200m
       limits:
-        memory: 3G
-        cpu: 800m
+        memory: 1Gi
+        cpu: 400m
 
   sidekiq:
     # background jobs, e.g., sending emails, cleaning data
@@ -62,36 +68,45 @@ gitlab:
     resources:
       # https://docs.gitlab.com/charts/charts/gitlab/sidekiq/#resources
       requests:
-        memory: 1G
-        cpu: 600m
+        memory: 512Mi
+        cpu: 200m
       limits:
-        memory: 2G
-        cpu: 1
+        memory: 1Gi
+        cpu: 400m
+
+  migrations:
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 200m
 
   postgresql:
     install: true
     resources:
       requests:
         memory: 256Mi
-        cpu: 250m
+        cpu: 100m
       limits:
         memory: 512Mi
-        cpu: 500m
+        cpu: 200m
 
   redis:
     install: true
     resources:
       requests:
         memory: 128Mi
-        cpu: 100m
+        cpu: 50m
       limits:
         memory: 256Mi
-        cpu: 250m
+        cpu: 100m
 
   kas:
     install: false
-  # minio:
-    # install: false
+  minio:
+    install: false
   registry:
     install: false
   gitlab-runner:
