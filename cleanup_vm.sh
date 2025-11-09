@@ -11,6 +11,13 @@ free -h
 echo -e "\nDisk space:"
 df -h / | head -2
 
+# Check if critical
+USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ "$USAGE" -gt 95 ]; then
+    echo "WARNING: Disk usage is CRITICAL ($USAGE%)!"
+    echo "Running emergency cleanup first..."
+fi
+
 # ================================
 # 1. Delete failed pods 
 # ================================

@@ -26,10 +26,13 @@ secrets/
 charts/*.tgz
 .helm/
 
-# K3s token files
+# K3s token and config files
 node-token
 server-token
 k3s-token
+k3s.yaml
+*/k3s.yaml
+*/node-token
 
 # ===== DOCKER =====
 # Docker compose override files
