@@ -3,7 +3,11 @@
 .vagrant/
 *.log
 vagrant_ansible_inventory_*
-
+.vagrant/
+*.log
+node-token
+k3s.yaml
+/tmp/
 # Vagrant boxes (can be re-downloaded)
 *.box
 
