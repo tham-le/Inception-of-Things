@@ -1,118 +1,86 @@
-# Inception-of-Things (IoT)
+# Inception-of-Things
 
-A System Administration project focused on learning Kubernetes fundamentals using K3s, K3d, Vagrant, and ArgoCD.
+Kubernetes from the ground up: a three-part progression from bare VMs to a full GitOps pipeline with ArgoCD.
 
-## 🎯 Overview
+## Architecture
 
-This project introduces Kubernetes concepts through practical implementation using:
-
-- **K3s**: Lightweight Kubernetes distribution
-- **K3d**: K3s in Docker for local development
-- **Vagrant**: Virtual machine management
-- **ArgoCD**: GitOps continuous deployment tool
-
-## 📁 Project Structure
-
-```text
-inception-of-things/
-├── p1/          # K3s with Vagrant (2 VMs)
-├── p2/          # K3s with 3 applications
-├── p3/          # K3d and ArgoCD
-└── bonus/       # GitLab integration (optional)
+```
+Part 1: K3s Cluster          Part 2: Ingress Routing       Part 3: GitOps with ArgoCD
+┌──────────────┐             ┌──────────────┐              ┌──────────────────┐
+│  Controller  │             │  K3s Server  │              │  K3d Cluster     │
+│  (K3s server)│◄───────     │              │              │  ┌────────────┐  │
+│  192.168.56  │  join       │  app1.com ──►│ app-one      │  │  ArgoCD    │  │
+│  .110        │             │  app2.com ──►│ app-two      │  │  ┌──────┐  │  │
+├──────────────┤             │  default  ──►│ app-three    │  │  │ dev  │  │  │
+│  Worker      │             │  (Ingress)   │              │  │  │ ns   │  │  │
+│  (K3s agent) │             └──────────────┘              │  │  └──────┘  │  │
+│  192.168.56  │                                           │  └────────────┘  │
+│  .111        │                                           └────────┬─────────┘
+└──────────────┘                                                    │ sync
+                                                           ┌───────▼─────────┐
+                                                           │   GitHub repo   │
+                                                           │   (manifests)   │
+                                                           └─────────────────┘
 ```
 
-## 🚀 Quick Start
+## Parts
 
-### Part 1: K3s and Vagrant
+### Part 1 — K3s with Vagrant
 
-Set up two virtual machines with K3s cluster (controller + worker node).
+Two Alpine VMs provisioned with Vagrant: a K3s server (controller) and a K3s agent (worker). Automatic cluster join via shared token.
 
 ```bash
-cd p1
-vagrant destroy -f
-vagrant up
+cd p1 && vagrant up
 vagrant ssh thi-leS
-hostname
-# Verify cluster
-kubectl get nodes -o wide
-exit
-
-vagrant ssh thi-leSW
-hostname
+kubectl get nodes -o wide    # Both nodes visible
 ```
 
-**Expected**: Two nodes (thi-leS as control-plane, thi-leSW as worker) with IPs 192.168.56.110 and 192.168.56.111.
+### Part 2 — Ingress routing
 
-### Part 2: K3s and Three Applications
-
-Deploy three web applications with Ingress routing based on hostnames.
+Three web applications deployed on K3s with hostname-based Ingress routing. `app1.com` and `app2.com` route to their own services; anything else falls through to `app-three` as the default backend.
 
 ```bash
-cd p2
-vagrant up
-vagrant ssh thi-leS
-
-# Verify deployment
-kubectl get pods,svc,ingress
-curl -H "Host: app1.com" http://localhost
-    
-curl -H "Host: app2.com" http://localhost
-
-exit
+cd p2 && vagrant up
+curl -H "Host: app1.com" http://192.168.56.110
+curl -H "Host: app2.com" http://192.168.56.110
+curl http://192.168.56.110    # → app-three (default)
 ```
 
-**Test from host** (add to `/etc/hosts` first):
+### Part 3 — GitOps with ArgoCD
 
-```text
-192.168.56.110 app1.com app2.com app3.com
-```
-
-#### Test with curl from your Inception_Host_VM
+K3d cluster (K3s in Docker) with ArgoCD watching a GitHub repo. Push a manifest change → ArgoCD auto-syncs → app updates without manual `kubectl apply`.
 
 ```bash
-# Test App 1
-curl http://app1.com
-
-# Test App 2
-curl http://app2.com
-
-# Test App 3 (The Ingress should use it as the default backend if no host matches)
-curl http://app3.com
+cd p3 && ./scripts/setup_all.sh
+./scripts/argocd_access.sh    # Get login credentials
+# ArgoCD UI: https://localhost:8080
+# App: http://localhost:8888
 ```
 
+Change the image tag in your repo, push, and watch ArgoCD deploy it.
 
-### Part 3: K3d and ArgoCD
+### Bonus — GitLab integration
 
-Implement GitOps workflow with ArgoCD for continuous deployment.
+Self-hosted GitLab instance integrated with ArgoCD. Same GitOps workflow, but with a local Git server instead of GitHub.
 
 ```bash
-cd p3
-./scripts/setup_all.sh
-
-# Get ArgoCD password
-./scripts/argocd_access.sh
-
-# Access ArgoCD UI at https://localhost:8080
-# Test app: curl http://localhost:8888/
+cd bonus && ./scripts/setup_all.sh
+# GitLab: http://localhost:8082
 ```
 
-**GitOps Demo**: Change image tag in your GitHub repo from v1 to v2, push changes, and watch ArgoCD sync automatically.
+## Setup
 
-### Bonus: GitLab Integration
+Requires a host VM with nested virtualization enabled. See [Set-up-VM.md](Set-up-VM.md) for detailed instructions.
 
-Add local GitLab instance integrated with ArgoCD.
+**Dependencies:** VirtualBox, Vagrant, Docker, kubectl, K3d
 
-```bash
-cd bonus
-./scripts/setup_all.sh
+## Structure
 
-# Access GitLab at http://localhost:8082
-# Follow on-screen instructions to push manifests
+```
+p1/              K3s cluster — 2 VMs, Vagrantfile + provisioning scripts
+p2/              Ingress routing — 3 apps, deployments, services, ingress YAML
+p3/              GitOps — K3d + ArgoCD setup scripts + application manifests
+bonus/           GitLab — self-hosted Git + ArgoCD + CI pipeline
 ```
 
-## 📚 Resources
-
-- [K3s Documentation](https://docs.k3s.io/)
-- [K3d Documentation](https://k3d.io/)
-- [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
-- [Vagrant Documentation](https://www.vagrantup.com/docs)
+*42 Paris — K3s, K3d, Vagrant, ArgoCD, Docker.*
