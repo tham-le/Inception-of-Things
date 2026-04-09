@@ -83,4 +83,4 @@ p3/              GitOps — K3d + ArgoCD setup scripts + application manifests
 bonus/           GitLab — self-hosted Git + ArgoCD + CI pipeline
 ```
 
-*42 Paris — K3s, K3d, Vagrant, ArgoCD, Docker.*
+*42 Paris — with [Yulia Boktaeva](https://github.com/yboktaeva) and [Christine Qin](https://github.com/cqin42). K3s, K3d, Vagrant, ArgoCD, Docker.*
