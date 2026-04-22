@@ -11,8 +11,13 @@ echo ">>> Provisioning K3s Server (${SERVER_HOSTNAME}) on Alpine..."
     fi
 
     echo "Installing K3s Server..."
-    # Using options from your friend's working example, plus --node-ip
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" K3S_KUBECONFIG_MODE="644" sh -s -
+    NODE_IFACE=$(ip -o addr show | awk "/${SERVER_IP//./\\.}/{print \$2}" | head -n1)
+    if [ -z "${NODE_IFACE}" ]; then
+        echo "ERROR: No interface found with IP ${SERVER_IP}"
+        exit 1
+    fi
+    echo "Using network interface: ${NODE_IFACE}"
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP} --flannel-iface ${NODE_IFACE}" K3S_KUBECONFIG_MODE="644" sh -s -
     echo "K3s server installation script finished."
     echo "Waiting for K3s server to create kubeconfig..."
     KUBE_CONFIG_PATH="/etc/rancher/k3s/k3s.yaml"
